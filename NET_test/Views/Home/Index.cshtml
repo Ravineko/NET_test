@@ -1,13 +1,17 @@
-﻿@model List<Person> // Assuming Person is your model class
+﻿@model List<Person> 
+<form method="post" enctype="multipart/form-data" action="@Url.Action("UploadFile", "Home")">
+    <input type="file" name="file" />
+    <button type="submit">Upload CSV</button>
+</form>
 
 <table id="dataTable" class="table">
     <thead>
         <tr>
-            <th>Name</th>
-            <th>Date of Birth</th>
-            <th>Married</th>
-            <th>Phone</th>
-            <th>Salary</th>
+            <th><a href="#" onclick="sortData(0)">Name</a></th>
+            <th><a href="#" onclick="sortData(1)">Date of Birth</a></th>
+            <th><a href="#" onclick="sortData(2)">Married</a></th>
+            <th><a href="#" onclick="sortData(3)">Phone</a></th>
+            <th><a href="#" onclick="sortData(4)">Salary</a></th>
             <th></th>
             <th></th>
         </tr>
@@ -34,7 +38,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editModalLabel">Edit Person</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeModal()">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -67,7 +71,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeModal()">Close</button>
                 <button type="button" class="btn btn-primary" onclick="saveEdit()">Save changes</button>
             </div>
         </div>
@@ -75,34 +79,61 @@
 </div>
 
 <script>
-    // JavaScript function to delete a record
+    function closeModal() {
+        $('#editModal').modal('hide');
+    }
+    function sortData(field) {
+        var rows = $('#dataTable tbody tr').get();
+
+        rows.sort(function (a, b) {
+            var A = $(a).children('td').eq(field).text().toUpperCase();
+            var B = $(b).children('td').eq(field).text().toUpperCase();
+
+            if (A < B) {
+                return -1;
+            }
+            if (A > B) {
+                return 1;
+            }
+            return 0;
+        });
+
+        $.each(rows, function (index, row) {
+            $('#dataTable tbody').append(row);
+        });
+
+       
+        $('#dataTable th').removeClass('active');
+
+        $('#dataTable th').eq(field).addClass('active');
+    }
+   
     function deleteRecord(id) {
         if (confirm('Are you sure you want to delete this record?')) {
             $.ajax({
                 type: 'DELETE',
                 url: '/Delete/' + id,
                 success: function (response) {
-                    // Handle successful deletion
-                    // Remove the row from the table
+                   
                     $('#row_' + id).remove();
                 },
                 error: function (xhr, status, error) {
-                    // Handle error
+                   
                     console.error('Error deleting record:', error);
                 }
             });
         }
     }
 
-    // JavaScript function to edit a record
+   
     function editRecord(id) {
         var name = $('#name_' + id).text();
         var dateOfBirth = $('#dateOfBirth_' + id).text();
         var married = $('#married_' + id).text() === "Yes" ? true : false;
         var phone = $('#phone_' + id).text();
-        var salary = $('#salary_' + id).text();
+        var salary = parseFloat($('#salary_' + id).text().replace(/[^0-9.-]/g, ''));
 
-        // Populate the edit form fields with the current record data
+       
         $('#editId').val(id);
         $('#editName').val(name);
         $('#editDateOfBirth').val(dateOfBirth);
@@ -110,18 +141,24 @@
         $('#editPhone').val(phone);
         $('#editSalary').val(salary);
 
-        // Show the edit modal
+      
         $('#editModal').modal('show');
     }
 
-    // JavaScript function to save edited record
+ 
     function saveEdit() {
         var id = $('#editId').val();
         var name = $('#editName').val();
         var dateOfBirth = $('#editDateOfBirth').val();
         var married = $('#editMarried').val() === "true";
         var phone = $('#editPhone').val();
-        var salary = parseFloat($('#editSalary').val()); // Assuming Salary is a numeric field
+        var salary = parseFloat($('#editSalary').val()); 
+
+        // Validation
+        if (!name || !dateOfBirth || !phone || isNaN(salary)) {
+            alert('Please fill out all fields correctly.');
+            return;
+        }
 
         var person = {
             Id: id,
@@ -138,10 +175,9 @@
             contentType: 'application/json',
             data: JSON.stringify(person),
             success: function (response) {
-                // Handle successful editing
-                // Close the modal
+               
                 $('#editModal').modal('hide');
-                // Update the table row with edited data
+               
                 $('#name_' + id).text(name);
                 $('#dateOfBirth_' + id).text(dateOfBirth);
                 $('#married_' + id).text(married ? "Yes" : "No");
@@ -149,7 +185,7 @@
                 $('#salary_' + id).text(salary);
             },
             error: function (xhr, status, error) {
-                // Handle error
+              
                 console.error('Error editing record:', error);
             }
         });

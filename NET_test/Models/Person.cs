@@ -7,10 +7,8 @@ namespace NET_test.Models
     {
 
         public int Id { get; set; }
-        [Name("Name")]
         [Required]
         public string Name { get; set; }
-        [Name("Date of Birth")]
         [Display(Name = "Date of Birth")]
         [DataType(DataType.Date)]
         public DateTime DateOfBirth { get; set; }
