@@ -7,23 +7,24 @@ using System.Formats.Asn1;
 using System.Globalization;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using CsvHelper.Configuration;
+using NET_test.Data;
+using NET_test.Repository.IRepository;
 
 namespace NET_test.Controllers
 {
 
     public class HomeController : Controller
     {
-        private readonly PersonDbContext _context;
+        private readonly IPersonRepository _dbperson;
                     
-        public HomeController(PersonDbContext context)
+        public HomeController(IPersonRepository dbperson)
         {
-            _context = context;
+            _dbperson = dbperson;
         }
 
-        // GET: Home
         public async Task<IActionResult> Index()
         {
-            var people = await _context.People.ToListAsync();
+            var people = await _dbperson.GetAllAsync();
             return View(people);
         }
 
@@ -70,8 +71,8 @@ namespace NET_test.Controllers
 
                 if (records.Any())
                 {
-                    await _context.People.AddRangeAsync(records);
-                    await _context.SaveChangesAsync();
+/*                    await _dbperson.CreateAsync(records);*/
+                    await _dbperson.SaveAsync();
                 }
                 else
                 {
@@ -85,14 +86,14 @@ namespace NET_test.Controllers
         [HttpDelete("Delete/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var person = await _context.People.FindAsync(id);
+            var person = await _dbperson.GetAsync(u => u.Id == id);
             if (person == null)
             {
                 return NotFound();
             }
 
-            _context.People.Remove(person);
-            await _context.SaveChangesAsync();
+            _dbperson.DeleteAsync(person);
+            await _dbperson.SaveAsync();
             return NoContent();
         }
 
@@ -104,8 +105,8 @@ namespace NET_test.Controllers
                 return BadRequest(ModelState);
             }
 
-            _context.Entry(person).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            _dbperson.EditAsync(person);
+            await _dbperson.SaveAsync();
             return NoContent();
         }
     }
