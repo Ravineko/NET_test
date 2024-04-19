@@ -52,7 +52,7 @@ namespace NET_test.Controllers
                 return NotFound();
             }
 
-            _dbperson.DeleteAsync(person);
+            await _dbperson.DeleteAsync(person);
             await _dbperson.SaveAsync();
             return NoContent();
         }
@@ -65,7 +65,7 @@ namespace NET_test.Controllers
                 return BadRequest(ModelState);
             }
 
-            _dbperson.EditAsync(person);
+            await _dbperson.EditAsync(person);
             await _dbperson.SaveAsync();
             return NoContent();
         }

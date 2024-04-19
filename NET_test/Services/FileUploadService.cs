@@ -1,27 +1,50 @@
 ﻿using CsvHelper.Configuration;
 using CsvHelper;
-using NET_test.Data;
 using NET_test.Models;
 using System.Globalization;
+using NET_test.Repository.IRepository;
 
 namespace NET_test.Services
 {
     public class FileUploadService : IFileUploadService
     {
-        private readonly PersonDbContext _context;
+        private readonly IPersonRepository _personRepository;
 
-        public FileUploadService(PersonDbContext context)
+        public FileUploadService(IPersonRepository personRepository)
         {
-            _context = context;
+            _personRepository = personRepository;
         }
 
         public async Task<bool> ProcessCSVFileAsync(IFormFile file)
         {
-            if (file == null || file.Length == 0)
+            try
             {
+                if (file == null || file.Length == 0)
+                {
+                    return false;
+                }
+
+                var records = await ParseCSVFileAsync(file);
+                if (records == null || !records.Any())
+                {
+                    return false;
+                }
+
+                await _personRepository.AddRangeAsync(records);
+                await _personRepository.SaveAsync();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                // Обробка помилок
                 return false;
             }
+        }
 
+        private async Task<List<Person>?> ParseCSVFileAsync(IFormFile file)
+        {
             var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 HasHeaderRecord = true,
@@ -29,18 +52,17 @@ namespace NET_test.Services
             };
 
             using (var streamReader = new StreamReader(file.OpenReadStream()))
-            using (var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture))
+            using (var csvReader = new CsvReader(streamReader, csvConfig))
             {
                 var records = new List<Person>();
-                csvReader.Read();
+                await csvReader.ReadAsync();
                 csvReader.ReadHeader();
-                while (csvReader.Read())
+                while (await csvReader.ReadAsync())
                 {
                     try
                     {
                         var record = new Person
                         {
-                            /* Id = csvReader.GetField<int>("Id"),*/
                             Name = csvReader.GetField("Name"),
                             DateOfBirth = csvReader.GetField<DateTime>("Date_of_Birth"),
                             Married = csvReader.GetField<bool>("Married"),
@@ -51,24 +73,14 @@ namespace NET_test.Services
                     }
                     catch (CsvHelperException ex)
                     {
-                        // Обробка помилок
-                        return false;
+                        Console.WriteLine($"{ex.Message}");
+                        return null;
                     }
                 }
-
-                if (records.Any())
-                {
-                    await _context.People.AddRangeAsync(records);
-                    await _context.SaveChangesAsync();
-                }
-                else
-                {
-                    return false;
-                }
+                return records;
             }
-
-            return true;
         }
     }
+
 
 }

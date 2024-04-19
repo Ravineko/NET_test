@@ -22,5 +22,10 @@ namespace NET_test.Repository
 
             return person;
         }
+        public async Task AddRangeAsync(IEnumerable<Person> people)
+        {
+            await _db.People.AddRangeAsync(people);
+        }
+
     }
 }
