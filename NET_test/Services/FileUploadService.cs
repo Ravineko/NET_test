@@ -45,12 +45,7 @@ namespace NET_test.Services
 
         private async Task<List<Person>?> ParseCSVFileAsync(IFormFile file)
         {
-            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                HasHeaderRecord = true,
-                MissingFieldFound = null,
-            };
-
+            var csvConfig = GetCsvConfiguration();
             using (var streamReader = new StreamReader(file.OpenReadStream()))
             using (var csvReader = new CsvReader(streamReader, csvConfig))
             {
@@ -61,14 +56,7 @@ namespace NET_test.Services
                 {
                     try
                     {
-                        var record = new Person
-                        {
-                            Name = csvReader.GetField("Name"),
-                            DateOfBirth = csvReader.GetField<DateTime>("Date_of_Birth"),
-                            Married = csvReader.GetField<bool>("Married"),
-                            Phone = csvReader.GetField("Phone"),
-                            Salary = csvReader.GetField<decimal>("Salary")
-                        };
+                        var record = ParsePersonFromCsv(csvReader);
                         records.Add(record);
                     }
                     catch (CsvHelperException ex)
@@ -80,6 +68,28 @@ namespace NET_test.Services
                 return records;
             }
         }
+
+        private CsvConfiguration GetCsvConfiguration()
+        {
+            return new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                HasHeaderRecord = true,
+                MissingFieldFound = null,
+            };
+        }
+
+        private Person ParsePersonFromCsv(CsvReader csvReader)
+        {
+            return new Person
+            {
+                Name = csvReader.GetField("Name"),
+                DateOfBirth = csvReader.GetField<DateTime>("Date_of_Birth"),
+                Married = csvReader.GetField<bool>("Married"),
+                Phone = csvReader.GetField("Phone"),
+                Salary = csvReader.GetField<decimal>("Salary")
+            };
+        }
+
     }
 
 
