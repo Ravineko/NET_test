@@ -1,11 +1,15 @@
 ﻿using Azure;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using NET_test.Models;
 using NET_test.Models.Dto;
 using NET_test.Repository.IRepository;
 using NET_test.Utility;
+using Newtonsoft.Json;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Security.Claims;
 
 namespace NET_test.Controllers
 {
@@ -18,27 +22,60 @@ namespace NET_test.Controllers
             _userRepo = userRepo;
             _response = new();
         }
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequestDTO model)
+        [HttpGet]
+        public IActionResult Login()
         {
-            var loginResponse = await _userRepo.Login(model);
-            if (loginResponse.User == null || string.IsNullOrEmpty(loginResponse.Token))
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                _response.IsSuccess = false;
-                _response.ErrorMessages.Add("Username or password is incorrect");
-                return BadRequest(_response);
-            }
-            _response.StatusCode = HttpStatusCode.OK;
-            _response.IsSuccess = true;
-            _response.Result = loginResponse;
-            return Ok(_response);
+            LoginRequestDTO obj = new();
+            return View(obj);
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterationRequestDTO model)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login(LoginRequestDTO obj)
         {
-            bool ifUserNameUnique = _userRepo.IsUniqueUser(model.UserName);
+            var loginResponse = await _userRepo.Login(obj);
+            APIResponse response = new APIResponse()
+            {
+               StatusCode = HttpStatusCode.OK,
+               IsSuccess = true,
+               Result = loginResponse
+            };
+
+            if (response != null && response.IsSuccess)
+            {
+                LoginResponseDTO model = JsonConvert.DeserializeObject<LoginResponseDTO>(Convert.ToString(response.Result));
+
+                var handler = new JwtSecurityTokenHandler();
+                var jwt = handler.ReadJwtToken(model.Token);
+
+                var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
+                identity.AddClaim(new Claim(ClaimTypes.Name, jwt.Claims.FirstOrDefault(u => u.Type == "name").Value));
+                identity.AddClaim(new Claim(ClaimTypes.Role, jwt.Claims.FirstOrDefault(u => u.Type == "role").Value));
+                var principal = new ClaimsPrincipal(identity);
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+                HttpContext.Session.SetString(SD.SessionToken, model.Token);
+                return RedirectToAction("Index", "Home");
+            }
+            else
+            {
+                ModelState.AddModelError("CustomError", response.ErrorMessages.FirstOrDefault());
+                return View(obj);
+            }
+        }
+
+        [HttpGet]
+        public IActionResult Register()
+        {
+            return View();
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterationRequestDTO obj)
+        {
+            bool ifUserNameUnique = _userRepo.IsUniqueUser(obj.UserName);
             if (!ifUserNameUnique)
             {
                 _response.StatusCode = HttpStatusCode.BadRequest;
@@ -47,7 +84,7 @@ namespace NET_test.Controllers
                 return BadRequest(_response);
             }
 
-            var user = await _userRepo.Register(model);
+            var user = await _userRepo.Register(obj);
             if (user == null)
             {
                 _response.StatusCode = HttpStatusCode.BadRequest;
@@ -55,10 +92,17 @@ namespace NET_test.Controllers
                 _response.ErrorMessages.Add("Error while registering");
                 return BadRequest(_response);
             }
-            _response.StatusCode = HttpStatusCode.OK;
-            _response.IsSuccess = true;
-            return Ok(_response);
+            APIResponse result = new APIResponse() 
+            { 
+                StatusCode = HttpStatusCode.OK,
+                IsSuccess = true
+            };
 
+            if (result != null && result.IsSuccess)
+            {
+                return RedirectToAction("Login");
+            }
+            return View();
         }
         public async Task<IActionResult> Logout()
         {

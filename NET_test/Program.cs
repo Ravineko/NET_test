@@ -16,6 +16,7 @@ builder.Services.AddDbContext<PersonDbContext>(options =>
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<PersonDbContext>();
 builder.Services.AddScoped<IPersonRepository, PersonRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddAutoMapper(typeof(MappingConfig));
 builder.Services.AddSession(options =>
