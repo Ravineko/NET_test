@@ -37,24 +37,23 @@ namespace NET_test.Controllers
             APIResponse response = new APIResponse()
             {
                StatusCode = HttpStatusCode.OK,
-               IsSuccess = true,
-               Result = loginResponse
+               IsSuccess = loginResponse != null && loginResponse.User != null
             };
-
-            if (response != null && response.IsSuccess)
+            Console.WriteLine("Отримана відповідь з сервера:");
+            Console.WriteLine(loginResponse.Token);
+            if (loginResponse != null && response.IsSuccess)
             {
-                LoginResponseDTO model = JsonConvert.DeserializeObject<LoginResponseDTO>(Convert.ToString(response.Result));
 
                 var handler = new JwtSecurityTokenHandler();
-                var jwt = handler.ReadJwtToken(model.Token);
+                var jwt = handler.ReadJwtToken(loginResponse.Token);
 
                 var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
-                identity.AddClaim(new Claim(ClaimTypes.Name, jwt.Claims.FirstOrDefault(u => u.Type == "name").Value));
+                identity.AddClaim(new Claim(ClaimTypes.Name, jwt.Claims.FirstOrDefault(u => u.Type == "unique_name").Value));
                 identity.AddClaim(new Claim(ClaimTypes.Role, jwt.Claims.FirstOrDefault(u => u.Type == "role").Value));
                 var principal = new ClaimsPrincipal(identity);
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
-                HttpContext.Session.SetString(SD.SessionToken, model.Token);
+                HttpContext.Session.SetString(SD.SessionToken, loginResponse.Token);
                 return RedirectToAction("Index", "Home");
             }
             else
