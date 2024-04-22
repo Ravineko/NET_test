@@ -1,8 +1,10 @@
 ﻿using Azure;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using NET_test.Models;
 using NET_test.Models.Dto;
 using NET_test.Repository.IRepository;
+using NET_test.Utility;
 using System.Net;
 
 namespace NET_test.Controllers
@@ -56,6 +58,18 @@ namespace NET_test.Controllers
             _response.StatusCode = HttpStatusCode.OK;
             _response.IsSuccess = true;
             return Ok(_response);
+
+        }
+        public async Task<IActionResult> Logout()
+        {
+            await HttpContext.SignOutAsync();
+            HttpContext.Session.SetString(SD.SessionToken, "");
+            return RedirectToAction("Index", "Home");
+        }
+
+        public IActionResult AccessDenied()
+        {
+            return View();
         }
     }
 }

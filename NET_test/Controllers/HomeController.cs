@@ -10,6 +10,7 @@ using CsvHelper.Configuration;
 using NET_test.Data;
 using NET_test.Repository.IRepository;
 using NET_test.Services;
+using NET_test.Utility;
 
 namespace NET_test.Controllers
 {
@@ -28,9 +29,11 @@ namespace NET_test.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var people = await _dbperson.GetAllAsync();
+            var sessionToken = HttpContext.Session.GetString(SD.SessionToken);
+            var people = await _dbperson.GetAllAsync(sessionToken);
             return View(people);
         }
+
         [HttpPost]
         public async Task<IActionResult> UploadFile(IFormFile file)
         {
